@@ -1,4 +1,4 @@
-name: Python 
+name: Python CI
 
 on: 
   push: 
@@ -22,7 +22,7 @@ jobs:
 
       - name: Installer les dependances
         run: |
-          pyton -m pip install --upgrade pip
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: lancer les tests
         run: pytest
