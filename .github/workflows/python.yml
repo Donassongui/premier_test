@@ -57,3 +57,13 @@ jobs:
          python -m src.main 
          pytest
 
+
+      - name: Afficher la date et l'heure complète
+        run: |
+          python3 -c "
+          from datetime import datetime
+          maintenant = datetime.now()
+          heure = maintenant.strftime('%H:%M:%S')
+          date  = maintenant.strftime('%d/%m/%Y')
+          print(f'Il est : {heure} et le : {date}')
+          "
