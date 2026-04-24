@@ -10,3 +10,4 @@ pyflakes==3.4.0
 requests==2.33.1
 setuptools==82.0.1
 urllib3==2.6.3
+pytest==8.2.0
