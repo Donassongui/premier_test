@@ -32,4 +32,11 @@ jobs:
     steps:
     - name: Valeur environnement
       run: |
-        echo ${{vars.VERSION}}      
+        echo ${{vars.VERSION}}    
+  prod_env_2:
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+    - name: Valeur environnement
+      run: |
+        echo ${{vars.CONFIG_VARIABLE}}
