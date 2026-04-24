@@ -1,6 +1,18 @@
 name: Python CI
 
 on: 
+  workflow_dispatch:
+   inputs:
+      nom:
+        description: 'Entrez votre nom'
+        required: true
+        type: string
+
+      prenom:
+        description: 'Entrez votre prénom'
+        required: true
+        type: string
+        
   push: 
     branches: ["main"]
   pull_request:
