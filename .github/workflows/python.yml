@@ -54,3 +54,16 @@ jobs:
         run: |
          python -m src.main 
          pytest
+
+      - name: Afficher la date et l'heure complète
+        run: |
+          echo "=================================="
+          echo "       HORLOGE QUOTIDIENNE        "
+          echo "=================================="
+          echo "  Date    : $(date +'%d/%m/%Y')"
+          echo "  Heure   : $(date +'%H')"
+          echo "  Minute  : $(date +'%M')"
+          echo "  Seconde : $(date +'%S')"
+          echo "=================================="
+          echo "  Complet : $(date +'%d/%m/%Y à %H:%M:%S')"
+          echo "=================================="
