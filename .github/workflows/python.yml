@@ -28,6 +28,6 @@ jobs:
       - name: Configurer variables secretes
         run: |
             echo "${{vars.CONF_VARIABLE}}"
-            echo "${{secret.DEMO}}"
+            echo "${{secrets.DEMO}}"
      
      
