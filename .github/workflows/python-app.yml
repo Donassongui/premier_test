@@ -19,6 +19,12 @@ jobs:
     - name: Valeur environnement
       run: |
         echo ${{vars.VERSION}}
+  #Sauvegarde de no_env en artefactt
+    - name: Artifact downloader
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifact
+        path: resultat.txt
   dev_env:
     runs-on: ubuntu-latest
     needs: no_env
