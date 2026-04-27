@@ -41,3 +41,14 @@ jobs:
           tags: |
             monuser/${{ inputs.service }}:${{ inputs.tag }}
             monuser/${{ inputs.service }}:latest
+  publish_images: 
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkoutv@4
+      - name: build image
+        run: docker build ./api/ -t donassongui/donassongui028:latest
+      - name: push image to docker hub
+        run: |
+          docker push donassongui/donassongui028:latest
+          
