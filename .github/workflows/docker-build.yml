@@ -50,5 +50,6 @@ jobs:
         run: docker build ./api/ -t donassongui/donassongui028:latest
       - name: push image to docker hub
         run: |
+          docker login -u donassongui -p ${{secrets.DOCKER_HUB_TOKEN}}
           docker push donassongui/donassongui028:latest
           
