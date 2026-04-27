@@ -4,6 +4,7 @@
 name: Python application
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "main" ]
   pull_request:
@@ -18,7 +19,14 @@ jobs:
     steps:
     - name: Valeur environnement
       run: |
-        echo ${{vars.VERSION}}
+        echo "${{vars.VERSION}}" > version.txt
+        
+    - name: sauvegarder la valeur de version
+      uses: actions/upload-artifact@v4
+      with:
+        name: version no-env
+        path: version.txt
+       
   dev_env:
     runs-on: ubuntu-latest
     needs: no_env
@@ -34,7 +42,7 @@ jobs:
     steps:
     - name: Valeur environnement
       run: |
-        echo ${{vars.VERSION}}    
+        echo ${{vars.VERSION}}
   prod_env_2:
     runs-on: ubuntu-latest
     needs: prod_env
@@ -44,11 +52,12 @@ jobs:
       run: |
         echo ${{vars.CONFIG_VARIABLE}}
     - name: Créer fichier
-      run: echo "Hello Artifact" > resultat.txt
-        
-    - name: artefact uploader
-      uses: actions/upload-artifact@v4
+      run: echo "Hello Artifact"
+
+    - name: Artifact downloader no_env
+      uses: actions/download-artifact@v4
       with:
-        name: build-artifact
-        path: resultat.txt
-      
+        name: version no-env
+        path: .
+    - name: afficher la valeur recup
+      run: cat version.txt
