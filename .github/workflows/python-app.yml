@@ -18,13 +18,7 @@ jobs:
     steps:
     - name: Valeur environnement
       run: |
-        echo " je suis la bro "
-  #Sauvegarde de no_env en artefactt
-    - name: Artifact uploader
-      uses: actions/upload-artifact@v4
-      with:
-        name: sauvegarder
-        path: resultat.txt
+        echo ${{vars.VERSION}}
   dev_env:
     runs-on: ubuntu-latest
     needs: no_env
@@ -56,4 +50,5 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: build-artifact
-        path: .
+        path: resultat.txt
+      
