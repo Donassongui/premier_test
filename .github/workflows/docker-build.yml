@@ -45,8 +45,7 @@ jobs:
           tags: |
             ghcr.io/donassongui/${{ inputs.service }}:${{ inputs.tag }}
             ghcr.io/donassongui/${{ inputs.service }}:latest
-            ghcr.io/donassongui/worker:latest
-            ghcr.io/donassongui/frontend:latest
+        
       - id: normalise_image_name
         run: |
           cleaned=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
