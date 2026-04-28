@@ -34,7 +34,7 @@ jobs:
         with:
               registry: ghcr.io
               username: ${{ github.actor }}
-              password: ${{ secrets.GH_ACCESS_TOKEN }}
+              password: ${{ secrets.GHITHUB_TOKEN }}
           
       - name: Build & Push
         uses: docker/build-push-action@v5
@@ -43,8 +43,8 @@ jobs:
           file: ./services/${{ inputs.service }}/Dockerfile
           push: true
           tags: |
-            donassongui/${{ inputs.service }}:${{ inputs.tag }}
-            donassongui/${{ inputs.service }}:latest
+            ghcr.io/donassongui/${{ inputs.service }}:${{ inputs.tag }}
+            ghcr.io/donassongui/${{ inputs.service }}:latest
       - id: normalise_image_name
         run: |
           cleaned=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
