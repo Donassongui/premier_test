@@ -1,0 +1,8 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"  # surveille les actions GitHub
+    directory: "/"                        # cherche dans tout le dépôt
+    schedule:
+      interval: "weekly"                  # vérifie chaque semaine
+    labels:
+      - "dependencies"                    # ajoute ce label aux PRs
