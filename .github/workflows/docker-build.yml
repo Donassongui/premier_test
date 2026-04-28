@@ -39,8 +39,8 @@ jobs:
           file: ./services/${{ inputs.service }}/Dockerfile
           push: true
           tags: |
-            monuser/${{ inputs.service }}:${{ inputs.tag }}
-            monuser/${{ inputs.service }}:latest
+            donassongui/${{ inputs.service }}:${{ inputs.tag }}
+            donassongui/${{ inputs.service }}:latest
       - id: normalise_image_name
         run: |
           cleaned=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
