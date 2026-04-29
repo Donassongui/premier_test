@@ -31,16 +31,13 @@ jobs:
 
       - name: creer le repository
         run:  |
-          curl -X POST \
+          curl -L \
+            -X POST \
             -H "Authorization: Bearer ${{ secrets.TOKEN_GITHUB }}" \
             -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2026-03-10"
             https://api.github.com/user/repos \
-            -d '{
-              "name": "${{ inputs.nom_repo }}",
-              "description": "Repository créé automatiquement par GitHub Actions",
-              "private": false,
-              "auto_init": true
-              }'
+            -d '{"name": "${{ inputs.nom_repo }}","description": "Repository créé automatiquement par GitHub Actions","private": false, "is_template": true}'
               
 
   creer_variable:                      
