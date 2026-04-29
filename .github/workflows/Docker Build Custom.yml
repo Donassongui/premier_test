@@ -37,7 +37,9 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "X-GitHub-Api-Version: 2026-03-10"
             https://api.github.com/user/repos \
-            -d '{"name": "${{ inputs.nom_repo }}","description": "Repository créé automatiquement par GitHub Actions","private": false, "is_template": true}'
+            -d '{"name": "${{ inputs.nom_repo }}",
+            "description": "Repository créé automatiquement par GitHub Actions",
+            "private": false, "is_template": true}'
               
 
   creer_variable:                      
