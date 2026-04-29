@@ -1,0 +1,57 @@
+name: "Docker Build Custom"
+
+on:
+  workflow_dispatch:
+    inputs:
+      nom:
+        description: "Ton nom"
+        required: true
+        type: string
+
+      version:
+        description: "Version de l'image (ex: 1.0.0)"
+        required: true
+        type: string
+        default: "1.0.0"
+
+      image:
+        description: "Nom de l'image Docker"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Afficher les informations saisies
+        run: |
+          echo "👤 Nom       : ${{ inputs.nom }}"
+          echo "🏷️  Version   : ${{ inputs.version }}"
+          echo "🐳 Image     : ${{ inputs.image }}"
+
+      - name: Connexion à ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build & Push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/${{ inputs.image }}
+          file: ./services/${{ inputs.image }}/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/donassongui/${{ inputs.image }}:${{ inputs.version }}
+            ghcr.io/donassongui/${{ inputs.image }}:latest
