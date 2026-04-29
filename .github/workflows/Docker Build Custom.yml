@@ -1,124 +1,125 @@
-name: "Docker Build Custom"
+name: interactif workflow
+
 
 on:
   workflow_dispatch:
+    
     inputs:
-      nom:
-        description: "Ton nom"
+      name:
+        description: 'nom utilisateur'
         required: true
         type: string
 
       version:
-        description: "Version de l'image (ex: 1.0.0)"
+        description: "Version du projet (ex: 1.0.0)"
         required: true
         type: string
         default: "1.0.0"
 
-      image:
+      image_docker:
         description: "Nom de l'image Docker"
         required: true
         type: string
 
 permissions:
-  contents: read
-  packages: write
-
+  contents: write
+  
 jobs:
-  build:
+  creer_repo:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout du code
-        uses: actions/checkout@v4
 
-      - name: Afficher les informations saisies
-        run: |
-          echo "👤 Nom       : ${{ inputs.nom }}"
-          echo "🏷️  Version   : ${{ inputs.version }}"
-          echo "🐳 Image     : ${{ inputs.image }}"
-
-      - name: Connexion à ghcr.io
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build & Push
-        uses: docker/build-push-action@v5
-        with:
-          context: ./services/${{ inputs.image }}
-          file: ./services/${{ inputs.image }}/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/donassongui/${{ inputs.image }}:${{ inputs.version }}
-            ghcr.io/donassongui/${{ inputs.image }}:latest
-
-      - name: Nettoyer le nom de l'image
-        id: clean
-        run: |
-          # Remplace les espaces par des tirets et met en minuscules
-          CLEAN_IMAGE=$(echo "${{ inputs.image }}" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
-          echo "image=$CLEAN_IMAGE" >> $GITHUB_OUTPUT
-      
-      - name: Build & Push
-        uses: docker/build-push-action@v5
-        with:
-          context: ./services/${{ steps.clean.outputs.image }}
-          file: ./services/${{ steps.clean.outputs.image }}/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/donassongui/${{ steps.clean.outputs.image }}:${{ inputs.version }}
-            ghcr.io/donassongui/${{ steps.clean.outputs.image }}:latest
-
-      - name: Créer la variable VERSION
-        run: |
+      - name: creer le repository
+        run:  |
           curl -X POST \
-            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Authorization: Bearer ${{ secrets.TOKEN_GITHUB }}" \
             -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ github.repository }}/actions/variables \
+            https://api.github.com/user/repos \
             -d '{
-              "name": "VERSION",
-              "value": "${{ inputs.version }}"
-            }'
-      - name: Créer le secret avec le nom de l'image
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              "name": "${{ inputs.nom_repo }}",
+              "description": "Repository créé automatiquement par GitHub Actions",
+              "private": false,
+              "auto_init": true
+              }'
+              
+
+  creer_variable:                      
+    runs-on: ubuntu-latest
+    needs: creer_repo  
+  
+    steps: 
+      - name: recuperer la clé publique du repo
         run: |
-          # Installer la librairie nacl
-          pip install PyNaCl --break-system-packages
+            curl -X POST \
+              -H "Authorization: Bearer ${{ secrets.TOKEN_GITHUB }}" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/${{ github.actor }}/${{ inputs.nom_repo }}/actions/variables \
+              -d '{
+                "name": "VERSION",
+                "value": "${{ inputs.version }}"
+              }'
+  creer_secret:
+    runs-on: ubuntu-latest
+    needs: creer_variable
 
-          # Récupère la clé publique du dépôt
-          PUBLIC_KEY=$(curl -s \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ github.repository }}/actions/secrets/public-key)
+    steps:
+      - name: recup la cle public du repo
+        id: cle_public
+        run: |
+          response=$(curl -s \
+              -H "Authorization: Bearer ${{ secrets.TOKEN_GITHUB }}" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/${{ github.actor }}/${{ inputs.nom_repo }}/actions/secrets/public-key)
+  
+            echo "key_id=$(echo $response | jq -r '.key_id')" >> "$GITHUB_OUTPUT"
+            echo "key=$(echo $response | jq -r '.key')" >> "$GITHUB_OUTPUT"
+  
+      - name: creer le secret IMAGE_DOCKER
+        run: |
+          encrypted=$(echo -n "${{ inputs.image_docker }}" | \
+              openssl rsautl -encrypt -pubin \
+              -inkey <(echo "${{ steps.cle_publique.outputs.key }}" | base64 -d) | \
+              base64 -w 0)
+  
+              curl -X PUT \
+              -H "Authorization: Bearer ${{ secrets.TOKEN_GITHUB }}" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/${{ github.actor }}/${{ inputs.nom_repo }}/actions/secrets/IMAGE_DOCKER \
+              -d "{
+                \"encrypted_value\": \"$encrypted\",
+                \"key_id\": \"${{ steps.cle_publique.outputs.key_id }}\"
+              }"
+  creer_readme:
+    runs-on: ubuntu-latest
+    needs: creer_secret
+    steps:
+     - name: creer le README.md
+       run: |
+         contenu=$(echo "# ${{ inputs.nom_repo }}
+            Repository créé automatiquement via GitHub Actions.
+            " | base64 -w 0)
 
-          KEY_ID=$(echo $PUBLIC_KEY | jq -r '.key_id')
-          KEY=$(echo $PUBLIC_KEY | jq -r '.key')
-
-          # Chiffre la valeur du secret avec la clé publique
-          ENCRYPTED=$(echo -n "ghcr.io/donassongui/${{ steps.clean.outputs.image }}:${{ inputs.version }}" | \
-            python3 -c "
-          import sys
-          from base64 import b64encode
-          from nacl import encoding, public
-
-          key = public.PublicKey('$KEY'.encode(), encoding.Base64Encoder())
-          box = public.SealedBox(key)
-          value = sys.stdin.read().encode()
-          encrypted = box.encrypt(value)
-          print(b64encode(encrypted).decode())
-          ")
-
-          # Crée le secret avec le nom de l'image
           curl -X PUT \
-            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Authorization: Bearer ${{ secrets.TOKEN_GITHUB }}" \
             -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/${{ github.repository }}/actions/secrets/${{ steps.clean.outputs.image }} \
+            https://api.github.com/repos/${{ github.actor }}/${{ inputs.nom_repo }}/contents/README.md \
             -d "{
-              \"encrypted_value\": \"$ENCRYPTED\",
-              \"key_id\": \"$KEY_ID\"
+              \"message\": \"Ajout du README.md\",
+              \"content\": \"$contenu\"
             }"
+            
+  resume:                          
+    runs-on: ubuntu-latest
+    needs: creer_readme              
+
+    steps:
+      
+      - name: Afficher le resume
+        run: |
+            echo "======================================="
+            echo " Repository créé avec succès !"
+            echo " Nom        : ${{ inputs.nom_repo }}"
+            echo "  Version    : ${{ inputs.version }}"
+            echo " Image      : ${{ inputs.image_docker }}"
+            echo " URL        : https://github.com/${{ github.actor }}/${{ inputs.nom_repo }}"
+            echo "======================================="
