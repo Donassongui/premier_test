@@ -83,12 +83,14 @@ jobs:
               "name": "VERSION",
               "value": "${{ inputs.version }}"
             }'
-
       - name: Créer le secret avec le nom de l'image
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Récupère la clé publique du dépôt (nécessaire pour chiffrer le secret)
+          # Installer la librairie nacl
+          pip install PyNaCl --break-system-packages
+
+          # Récupère la clé publique du dépôt
           PUBLIC_KEY=$(curl -s \
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
