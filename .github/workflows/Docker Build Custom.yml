@@ -72,3 +72,51 @@ jobs:
           tags: |
             ghcr.io/donassongui/${{ steps.clean.outputs.image }}:${{ inputs.version }}
             ghcr.io/donassongui/${{ steps.clean.outputs.image }}:latest
+
+      - name: Créer la variable VERSION
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/variables \
+            -d '{
+              "name": "VERSION",
+              "value": "${{ inputs.version }}"
+            }'
+
+      - name: Créer le secret avec le nom de l'image
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Récupère la clé publique du dépôt (nécessaire pour chiffrer le secret)
+          PUBLIC_KEY=$(curl -s \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/secrets/public-key)
+
+          KEY_ID=$(echo $PUBLIC_KEY | jq -r '.key_id')
+          KEY=$(echo $PUBLIC_KEY | jq -r '.key')
+
+          # Chiffre la valeur du secret avec la clé publique
+          ENCRYPTED=$(echo -n "ghcr.io/donassongui/${{ steps.clean.outputs.image }}:${{ inputs.version }}" | \
+            python3 -c "
+          import sys
+          from base64 import b64encode
+          from nacl import encoding, public
+
+          key = public.PublicKey('$KEY'.encode(), encoding.Base64Encoder())
+          box = public.SealedBox(key)
+          value = sys.stdin.read().encode()
+          encrypted = box.encrypt(value)
+          print(b64encode(encrypted).decode())
+          ")
+
+          # Crée le secret avec le nom de l'image
+          curl -X PUT \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/secrets/${{ steps.clean.outputs.image }} \
+            -d "{
+              \"encrypted_value\": \"$ENCRYPTED\",
+              \"key_id\": \"$KEY_ID\"
+            }"
