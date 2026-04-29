@@ -55,3 +55,20 @@ jobs:
           tags: |
             ghcr.io/donassongui/${{ inputs.image }}:${{ inputs.version }}
             ghcr.io/donassongui/${{ inputs.image }}:latest
+
+      - name: Nettoyer le nom de l'image
+        id: clean
+        run: |
+          # Remplace les espaces par des tirets et met en minuscules
+          CLEAN_IMAGE=$(echo "${{ inputs.image }}" | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
+          echo "image=$CLEAN_IMAGE" >> $GITHUB_OUTPUT
+      
+      - name: Build & Push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/${{ steps.clean.outputs.image }}
+          file: ./services/${{ steps.clean.outputs.image }}/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/donassongui/${{ steps.clean.outputs.image }}:${{ inputs.version }}
+            ghcr.io/donassongui/${{ steps.clean.outputs.image }}:latest
