@@ -38,7 +38,7 @@ jobs:
           echo "Status : $STATUS"
 
           if [ "$STATUS" = "200" ]; then
-            echo "⚠️ Repository déjà existant, on continue !"
+            echo " Repository déjà existant, on continue !"
           else
             curl -L \
               -X POST \
@@ -51,7 +51,7 @@ jobs:
                 \"description\": \"Repository créé automatiquement par GitHub Actions\",
                 \"private\": false
               }"
-            echo "✅ Repository $NOM_REPO créé !"
+            echo " Repository $NOM_REPO créé !"
           fi
 
   creer_variable:
@@ -76,14 +76,14 @@ jobs:
               -H "Accept: application/vnd.github+json" \
               https://api.github.com/repos/$ACTOR/$NOM_REPO/actions/variables/VERSION \
               -d "{\"name\": \"VERSION\", \"value\": \"$VERSION\"}"
-            echo "✅ Variable VERSION mise à jour : $VERSION"
+            echo " Variable VERSION mise à jour : $VERSION"
           else
             curl -s -X POST \
               -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
               https://api.github.com/repos/$ACTOR/$NOM_REPO/actions/variables \
               -d "{\"name\": \"VERSION\", \"value\": \"$VERSION\"}"
-            echo "✅ Variable VERSION créée : $VERSION"
+            echo " Variable VERSION créée : $VERSION"
           fi
 
   creer_secret:
@@ -99,7 +99,7 @@ jobs:
 
           pip install PyNaCl --break-system-packages
 
-          echo "⏳ Attente initialisation du repo..."
+          echo " Attente initialisation du repo..."
           sleep 5
 
           for i in 1 2 3; do
@@ -112,16 +112,16 @@ jobs:
             KEY=$(echo $PUBLIC_KEY | jq -r '.key')
 
             if [ "$KEY_ID" != "null" ] && [ "$KEY_ID" != "" ]; then
-              echo "🔑 Clé récupérée : $KEY_ID"
+              echo " Clé récupérée : $KEY_ID"
               break
             fi
 
-            echo "⏳ Tentative $i échouée, on attend 5s..."
+            echo " Tentative $i échouée, on attend 5s..."
             sleep 5
           done
 
           if [ "$KEY_ID" = "null" ] || [ "$KEY_ID" = "" ]; then
-            echo "❌ Impossible de récupérer la clé publique"
+            echo " Impossible de récupérer la clé publique"
             exit 1
           fi
 
@@ -137,7 +137,7 @@ jobs:
           print(b64encode(encrypted).decode())
           ")
 
-          echo "🔐 Valeur chiffrée avec succès"
+          echo " Valeur chiffrée avec succès"
 
           curl -s -X PUT \
             -H "Authorization: Bearer $GH_TOKEN" \
@@ -148,7 +148,7 @@ jobs:
               \"key_id\": \"$KEY_ID\"
             }"
 
-          echo "✅ Secret IMAGE_DOCKER créé !"
+          echo " Secret IMAGE_DOCKER créé !"
 
   creer_readme:
     runs-on: ubuntu-latest
@@ -171,7 +171,7 @@ jobs:
               \"content\": \"$contenu\"
             }"
 
-          echo "✅ README.md créé !"
+          echo " README.md créé !"
 
   resume:
     runs-on: ubuntu-latest
@@ -180,9 +180,9 @@ jobs:
       - name: Afficher le résumé
         run: |
           echo "======================================="
-          echo "✅ Repository créé avec succès !"
-          echo "📌 Nom     : ${{ inputs.nom_repo }}"
-          echo "🏷️  Version : ${{ inputs.version }}"
-          echo "🐳 Image   : ${{ inputs.image_docker }}"
-          echo "🔗 URL     : https://github.com/${{ github.actor }}/${{ inputs.nom_repo }}"
+          echo " Repository créé avec succès !"
+          echo " Nom     : ${{ inputs.nom_repo }}"
+          echo "  Version : ${{ inputs.version }}"
+          echo " Image   : ${{ inputs.image_docker }}"
+          echo " URL     : https://github.com/${{ github.actor }}/${{ inputs.nom_repo }}"
           echo "======================================="
