@@ -1,0 +1,203 @@
+name: Mon workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      nom_repo:
+        description: 'Nom du repository'
+        required: true
+        type: string
+      version:
+        description: "Version du projet (ex: 1.0.0)"
+        required: true
+        type: string
+        default: "1.0.0"
+      image_docker:
+        description: "Nom de l'image Docker"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  creer_repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Créer le repository
+        run: |
+          NOM_REPO="${{ inputs.nom_repo }}"
+          GH_TOKEN="${{ secrets.TOKEN_GITHUB }}"
+          ACTOR="${{ github.actor }}"
+
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/$ACTOR/$NOM_REPO)
+
+          if [ "$STATUS" = "200" ]; then
+            echo "⚠️ Repository déjà existant, on continue !"
+          else
+            curl -L \
+              -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2024-03-10" \
+              https://api.github.com/user/repos \
+              -d "{
+                \"name\": \"$NOM_REPO\",
+                \"description\": \"Repository créé automatiquement par GitHub Actions\",
+                \"private\": false
+              }"
+            echo "✅ Repository $NOM_REPO créé !"
+          fi
+
+  creer_readme:
+    runs-on: ubuntu-latest
+    needs: creer_repo       # ← README créé juste après le repo
+    steps:
+      - name: Créer le README.md
+        run: |
+          NOM_REPO="${{ inputs.nom_repo }}"
+          GH_TOKEN="${{ secrets.TOKEN_GITHUB }}"
+          ACTOR="${{ github.actor }}"
+
+          sleep 3   # ← attendre que le repo soit prêt
+
+          contenu=$(printf "# $NOM_REPO\nRepository créé automatiquement via GitHub Actions." | base64 -w 0)
+
+          SHA=$(curl -s \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/$ACTOR/$NOM_REPO/contents/README.md \
+            | jq -r '.sha // empty')
+
+          if [ -n "$SHA" ]; then
+            curl -s -X PUT \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/$ACTOR/$NOM_REPO/contents/README.md \
+              -d "{
+                \"message\": \"Mise à jour du README.md\",
+                \"content\": \"$contenu\",
+                \"sha\": \"$SHA\"
+              }"
+            echo "✅ README.md mis à jour !"
+          else
+            curl -s -X PUT \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/$ACTOR/$NOM_REPO/contents/README.md \
+              -d "{
+                \"message\": \"Ajout du README.md\",
+                \"content\": \"$contenu\"
+              }"
+            echo "✅ README.md créé !"
+          fi
+
+  creer_variable:
+    runs-on: ubuntu-latest
+    needs: creer_readme     # ← après le README
+    steps:
+      - name: Créer la variable VERSION
+        run: |
+          NOM_REPO="${{ inputs.nom_repo }}"
+          GH_TOKEN="${{ secrets.TOKEN_GITHUB }}"
+          ACTOR="${{ github.actor }}"
+          VERSION="${{ inputs.version }}"
+
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/$ACTOR/$NOM_REPO/actions/variables/VERSION)
+
+          if [ "$STATUS" = "200" ]; then
+            curl -s -X PATCH \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/$ACTOR/$NOM_REPO/actions/variables/VERSION \
+              -d "{\"name\": \"VERSION\", \"value\": \"$VERSION\"}"
+            echo "✅ Variable VERSION mise à jour : $VERSION"
+          else
+            curl -s -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/$ACTOR/$NOM_REPO/actions/variables \
+              -d "{\"name\": \"VERSION\", \"value\": \"$VERSION\"}"
+            echo "✅ Variable VERSION créée : $VERSION"
+          fi
+
+  creer_secret:
+    runs-on: ubuntu-latest
+    needs: creer_variable   # ← après la variable
+    steps:
+      - name: Créer le secret IMAGE_DOCKER
+        run: |
+          NOM_REPO="${{ inputs.nom_repo }}"
+          GH_TOKEN="${{ secrets.TOKEN_GITHUB }}"
+          ACTOR="${{ github.actor }}"
+          IMAGE="${{ inputs.image_docker }}"
+
+          pip install PyNaCl --break-system-packages
+
+          for i in 1 2 3; do
+            PUBLIC_KEY=$(curl -s \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/$ACTOR/$NOM_REPO/actions/secrets/public-key)
+
+            KEY_ID=$(echo $PUBLIC_KEY | jq -r '.key_id')
+            KEY=$(echo $PUBLIC_KEY | jq -r '.key')
+
+            if [ "$KEY_ID" != "null" ] && [ "$KEY_ID" != "" ]; then
+              echo "🔑 Clé récupérée : $KEY_ID"
+              break
+            fi
+
+            echo "⏳ Tentative $i échouée, on attend 5s..."
+            sleep 5
+          done
+
+          if [ "$KEY_ID" = "null" ] || [ "$KEY_ID" = "" ]; then
+            echo "❌ Impossible de récupérer la clé publique"
+            exit 1
+          fi
+
+          ENCRYPTED=$(python3 -c "
+          from base64 import b64encode, b64decode
+          from nacl import public
+
+          key_bytes = b64decode('$KEY')
+          key = public.PublicKey(key_bytes)
+          box = public.SealedBox(key)
+          value = '$IMAGE'.encode()
+          encrypted = box.encrypt(value)
+          print(b64encode(encrypted).decode())
+          ")
+
+          echo "🔐 Valeur chiffrée avec succès"
+
+          curl -s -X PUT \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/$ACTOR/$NOM_REPO/actions/secrets/IMAGE_DOCKER \
+            -d "{
+              \"encrypted_value\": \"$ENCRYPTED\",
+              \"key_id\": \"$KEY_ID\"
+            }"
+
+          echo "✅ Secret IMAGE_DOCKER créé !"
+
+  resume:
+    runs-on: ubuntu-latest
+    needs: creer_secret
+    steps:
+      - name: Afficher le résumé
+        run: |
+          echo "======================================="
+          echo "✅ Repository créé avec succès !"
+          echo "📌 Nom     : ${{ inputs.nom_repo }}"
+          echo "🏷️  Version : ${{ inputs.version }}"
+          echo "🐳 Image   : ${{ inputs.image_docker }}"
+          echo "🔗 URL     : https://github.com/${{ github.actor }}/${{ inputs.nom_repo }}"
+          echo "======================================="
