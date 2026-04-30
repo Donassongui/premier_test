@@ -24,7 +24,7 @@ jobs:
   creer_repo:
     runs-on: ubuntu-latest
     steps:
-      - name: Créer le repository
+      - name: creer le repository
         run: |
           NOM_REPO="${{ inputs.nom_repo }}"
           GH_TOKEN="${{ secrets.TOKEN_GITHUB }}"
@@ -34,6 +34,8 @@ jobs:
             -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             https://api.github.com/repos/$ACTOR/$NOM_REPO)
+
+          echo "Status : $STATUS"
 
           if [ "$STATUS" = "200" ]; then
             echo "⚠️ Repository déjà existant, on continue !"
@@ -52,52 +54,9 @@ jobs:
             echo "✅ Repository $NOM_REPO créé !"
           fi
 
-  creer_readme:
-    runs-on: ubuntu-latest
-    needs: creer_repo       # ← README créé juste après le repo
-    steps:
-      - name: Créer le README.md
-        run: |
-          NOM_REPO="${{ inputs.nom_repo }}"
-          GH_TOKEN="${{ secrets.TOKEN_GITHUB }}"
-          ACTOR="${{ github.actor }}"
-
-          sleep 3   # ← attendre que le repo soit prêt
-
-          contenu=$(printf "# $NOM_REPO\nRepository créé automatiquement via GitHub Actions." | base64 -w 0)
-
-          SHA=$(curl -s \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            https://api.github.com/repos/$ACTOR/$NOM_REPO/contents/README.md \
-            | jq -r '.sha // empty')
-
-          if [ -n "$SHA" ]; then
-            curl -s -X PUT \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              https://api.github.com/repos/$ACTOR/$NOM_REPO/contents/README.md \
-              -d "{
-                \"message\": \"Mise à jour du README.md\",
-                \"content\": \"$contenu\",
-                \"sha\": \"$SHA\"
-              }"
-            echo "✅ README.md mis à jour !"
-          else
-            curl -s -X PUT \
-              -H "Authorization: Bearer $GH_TOKEN" \
-              -H "Accept: application/vnd.github+json" \
-              https://api.github.com/repos/$ACTOR/$NOM_REPO/contents/README.md \
-              -d "{
-                \"message\": \"Ajout du README.md\",
-                \"content\": \"$contenu\"
-              }"
-            echo "✅ README.md créé !"
-          fi
-
   creer_variable:
     runs-on: ubuntu-latest
-    needs: creer_readme     # ← après le README
+    needs: creer_repo
     steps:
       - name: Créer la variable VERSION
         run: |
@@ -129,7 +88,7 @@ jobs:
 
   creer_secret:
     runs-on: ubuntu-latest
-    needs: creer_variable   # ← après la variable
+    needs: creer_variable
     steps:
       - name: Créer le secret IMAGE_DOCKER
         run: |
@@ -139,6 +98,9 @@ jobs:
           IMAGE="${{ inputs.image_docker }}"
 
           pip install PyNaCl --break-system-packages
+
+          echo "⏳ Attente initialisation du repo..."
+          sleep 5
 
           for i in 1 2 3; do
             PUBLIC_KEY=$(curl -s \
@@ -188,9 +150,32 @@ jobs:
 
           echo "✅ Secret IMAGE_DOCKER créé !"
 
-  resume:
+  creer_readme:
     runs-on: ubuntu-latest
     needs: creer_secret
+    steps:
+      - name: Créer le README.md
+        run: |
+          NOM_REPO="${{ inputs.nom_repo }}"
+          GH_TOKEN="${{ secrets.TOKEN_GITHUB }}"
+          ACTOR="${{ github.actor }}"
+
+          contenu=$(printf "# $NOM_REPO\nRepository créé automatiquement via GitHub Actions." | base64 -w 0)
+
+          curl -s -X PUT \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/$ACTOR/$NOM_REPO/contents/README.md \
+            -d "{
+              \"message\": \"Ajout du README.md\",
+              \"content\": \"$contenu\"
+            }"
+
+          echo "✅ README.md créé !"
+
+  resume:
+    runs-on: ubuntu-latest
+    needs: creer_readme
     steps:
       - name: Afficher le résumé
         run: |
