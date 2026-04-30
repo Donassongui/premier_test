@@ -40,6 +40,24 @@ jobs:
             -d '{"name": "${{ inputs.nom_repo }}",
             "description": "Repository créé automatiquement par GitHub Actions",
             "private": false, "is_template": true}'
+            https://api.github.com/repos/${{ github.actor }}/${{ inputs.nom_repo }})
+
+          if [ "$STATUS" = "200" ]; then
+            echo "⚠️ Repository déjà existant, on continue !"
+          else
+            curl -L \
+              -X POST \
+              -H "Authorization: Bearer ${{ secrets.TOKEN_GITHUB }}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2024-03-10" \
+              https://api.github.com/user/repos \
+              -d '{
+                "name": "${{ inputs.nom_repo }}",
+                "description": "Repository créé automatiquement par GitHub Actions",
+                "private": false
+              }'
+            echo "✅ Repository ${{ inputs.nom_repo }} créé !"
+          fi
 
 
   creer_variable:                      
