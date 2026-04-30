@@ -70,8 +70,7 @@ jobs:
               -H "Accept: application/vnd.github+json" \
               https://api.github.com/repos/${{ github.actor }}/${{ inputs.nom_repo }}/actions/secrets/public-key)
   
-            echo "key_id=$(echo $response | jq -r '.key_id')" >> "$GITHUB_OUTPUT"
-            echo "key=$(echo $response | jq -r '.key')" >> "$GITHUB_OUTPUT"
+
   
       - name: creer le secret IMAGE_DOCKER
         run: |
