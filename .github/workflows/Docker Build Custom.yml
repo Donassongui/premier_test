@@ -40,7 +40,7 @@ jobs:
             -d '{"name": "${{ inputs.nom_repo }}",
             "description": "Repository créé automatiquement par GitHub Actions",
             "private": false, "is_template": true}'
-              
+
 
   creer_variable:                      
     runs-on: ubuntu-latest
