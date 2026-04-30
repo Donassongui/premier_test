@@ -40,10 +40,10 @@ jobs:
             -d '{"name": "${{ inputs.nom_repo }}",
             "description": "Repository créé automatiquement par GitHub Actions",
             "private": false, "is_template": true}'
-            https://api.github.com/repos/${{ github.actor }}/${{ inputs.nom_repo }})
+            https://api.github.com/repos/${{ github.actor }}/$({{ inputs.nom_repo }})
 
           if [ "$STATUS" = "200" ]; then
-            echo "⚠️ Repository déjà existant, on continue !"
+            echo " Repository déjà existant, on continue !"
           else
             curl -L \
               -X POST \
@@ -56,7 +56,7 @@ jobs:
                 "description": "Repository créé automatiquement par GitHub Actions",
                 "private": false
               }'
-            echo "✅ Repository ${{ inputs.nom_repo }} créé !"
+            echo " Repository ${{ inputs.nom_repo }} créé !"
           fi
 
 
