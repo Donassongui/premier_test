@@ -1,4 +1,4 @@
-name: Premier workflow
+name: Second workflow
 
 on:
   workflow_dispatch:
