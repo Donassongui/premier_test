@@ -82,6 +82,7 @@ jobs:
           ACTOR="${{ github.actor }}"
           IMAGE="${{ inputs.image_docker }}"
 
+          pip install PyNaCl --break-system-packages
 
           echo " Attente initialisation du repo..."
           sleep 5
