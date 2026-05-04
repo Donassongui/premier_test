@@ -82,11 +82,6 @@ jobs:
           ACTOR="${{ github.actor }}"
           IMAGE="${{ inputs.image_docker }}"
 
-          pip install PyNaCl --break-system-packages
-
-          echo " Attente initialisation du repo..."
-          sleep 5
-
 
           curl -s -X PUT \
             -H "Authorization: Bearer $GH_TOKEN" \
